@@ -2,7 +2,7 @@
 extern crate structopt;
 extern crate ansi_term;
 
-use ansi_term::Color::{Fixed, Blue};
+use ansi_term::Color::{Blue, Fixed};
 use std::cmp;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
@@ -27,7 +27,8 @@ struct Opt {
     one_byte_char: bool,
     #[structopt(short = "C", long = "canonical-hex", help = "Canonical hexadecimal display")]
     canonical_hex: bool,
-    #[structopt(short = "x", long = "two-byte-hex", help = "Two-byte hexadecimal display (default)")]
+    #[structopt(short = "x", long = "two-byte-hex",
+                help = "Two-byte hexadecimal display (default)")]
     two_byte_hex: bool,
     #[structopt(short = "d", long = "two-byte-dec", help = "Two-byte decimal display")]
     two_byte_dec: bool,
@@ -69,27 +70,14 @@ fn main() {
     }
 
     // display mode
-    let display = if opt.one_byte_octal {
-        Display::OneByteOctal
-    }
-    else if opt.one_byte_char {
-        Display::OneByteChar
-    }
-    else if opt.canonical_hex {
-        Display::CanonicalHex
-    }
-    else if opt.two_byte_dec {
-        Display::TwoByteDecimal
-    }
-    else if opt.two_byte_octal {
-        Display::TwoByteOctal
-    }
-    else if opt.two_byte_hex {
-        Display::TwoByteHex
-    }
-    else {
-        Display::TwoByteHex
-    };
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    let display = if opt.one_byte_octal { Display::OneByteOctal }
+    else if opt.one_byte_char { Display::OneByteChar }
+    else if opt.canonical_hex { Display::CanonicalHex }
+    else if opt.two_byte_dec { Display::TwoByteDecimal }
+    else if opt.two_byte_octal { Display::TwoByteOctal }
+    else if opt.two_byte_hex { Display::TwoByteHex }
+    else { Display::TwoByteHex };
 
     if !opt.no_color && cfg!(windows) {
         ansi_term::enable_ansi_support().unwrap();
@@ -169,6 +157,7 @@ fn print_line(
                 }
             },
         };
+
         match display {
             OneByteOctal => write!(handle, " {:03o}", word).unwrap(),
             OneByteChar => match ((word as u8) as char).is_control() {
@@ -176,7 +165,7 @@ fn print_line(
                 false => write!(handle, " {:03}", (word as u8) as char).unwrap(),
             },
             CanonicalHex => write!(handle, " {:02x}", word).unwrap(),
-            TwoByteDecimal => write!(handle, "  {:05} ", word).unwrap(),
+            TwoByteDecimal => write!(handle, " {:05} ", word).unwrap(),
             TwoByteOctal => write!(handle, " {:06o} ", word).unwrap(),
             TwoByteHex => write!(handle, " {:04x}", word).unwrap(),
         }
@@ -192,7 +181,7 @@ fn print_line(
                 CanonicalHex => 3,
                 TwoByteDecimal => 8,
                 TwoByteOctal => 8,
-                TwoByteHex => 5
+                TwoByteHex => 5,
             };
             for _ in 0..word_size * words_left {
                 write!(handle, " ").unwrap();
