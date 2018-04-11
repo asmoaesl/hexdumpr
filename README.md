@@ -8,6 +8,8 @@ You need Rust installed and Cargo available from the terminal.
 2. Extract the zip into an empty directory.
 3. Open a shell and run `cargo build --release`. The executable will be in `./target/release/`.
 
+Alternatively, you can send the compiled executable to `~/.cargo/bin` (hopefully in PATH), by executing `cargo install --path .`.
+
 # What Changed Since Forking
 * Replaced `getopts` with `structopt` (clap) argument parsing.
 * Added ANSI color support and printing (can be disabled.)
