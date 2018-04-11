@@ -2,11 +2,13 @@
 extern crate structopt;
 extern crate ansi_term;
 
-use structopt::StructOpt;
-use std::fs::File;
-use std::io::prelude::*;
+use ansi_term::Color::Blue;
+use ansi_term::Style;
 use std::cmp;
+use std::fs::File;
+use std::io::{stdout, Read, Write};
 use std::path::PathBuf;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt()]
@@ -44,7 +46,7 @@ fn main() {
     let offset = opt.offset.unwrap_or(0);
 
     // get filename
-    let filename = opt.file_name;
+    let filename = &opt.file_name;
 
     print!("{}:", filename.to_str().unwrap());
 
@@ -96,25 +98,55 @@ fn main() {
             bytes = 2;
         }
     }
-    print_hexdump(&data[offset..end], offset, display, bytes);
+
+    if !opt.no_color && cfg!(windows) {
+        ansi_term::enable_ansi_support().unwrap();
+    }
+
+    print_hexdump(&data[offset..end], offset, display, bytes, &opt);
 }
 
-pub fn print_hexdump(data: &[u8], offset: usize, display: char, bytes: usize) {
+fn print_hexdump(data: &[u8], offset: usize, display: char, bytes: usize, opt: &Opt) {
+    // TODO: use StdoutLock
+    let no_color = opt.no_color;
+    let stdout = stdout();
+    let mut handle = stdout.lock();
+
     let mut address = 0;
     while address <= data.len() {
         let end = cmp::min(address + 16, data.len());
-        print_line(&data[address..end], address + offset, display, bytes);
+        print_line(
+            &data[address..end],
+            address + offset,
+            display,
+            bytes,
+            no_color,
+            &mut handle,
+        );
         address = address + 16;
     }
 }
 
-fn print_line(line: &[u8], address: usize, display: char, bytes: usize) {
+fn print_line(
+    line: &[u8],
+    address: usize,
+    display: char,
+    bytes: usize,
+    no_color: bool,
+    handle: &mut ::std::io::StdoutLock,
+) {
     // print address
-    print!("\n{:08x}:", address);
+    if no_color {
+        write!(handle, "\n{:08x}:", address).unwrap();
+    } else {
+        write!(handle, "\n{}:", Blue.paint(format!("{:08x}", address))).unwrap();
+    }
+
     let words = match (line.len() % bytes) == 0 {
         true => line.len() / bytes,
         false => (line.len() / bytes) + 1,
     };
+
     for b in 0..words {
         let word = match bytes {
             1 => line[b] as u16,
@@ -126,16 +158,16 @@ fn print_line(line: &[u8], address: usize, display: char, bytes: usize) {
             },
         };
         match display {
-            'b' => print!(" {:03o}", word),
+            'b' => write!(handle, " {:03o}", word).unwrap(),
             'c' => match ((word as u8) as char).is_control() {
-                true => print!(" "),
-                false => print!(" {:03}", (word as u8) as char),
+                true => write!(handle, " ").unwrap(),
+                false => write!(handle, " {:03}", (word as u8) as char).unwrap(),
             },
-            'C' => print!(" {:02x}", word),
-            'x' => print!(" {:04x}", word),
-            'o' => print!(" {:06o} ", word),
-            'd' => print!("  {:05} ", word),
-            _ => print!(" {:04x}", word),
+            'C' => write!(handle, " {:02x}", word).unwrap(),
+            'x' => write!(handle, " {:04x}", word).unwrap(),
+            'o' => write!(handle, " {:06o} ", word).unwrap(),
+            'd' => write!(handle, "  {:05} ", word).unwrap(),
+            _ => write!(handle, " {:04x}", word).unwrap(),
         }
     }
 
@@ -153,16 +185,23 @@ fn print_line(line: &[u8], address: usize, display: char, bytes: usize) {
                 _ => 5,
             };
             for _ in 0..word_size * words_left {
-                print!(" ");
+                write!(handle, " ").unwrap();
             }
         }
 
-        print!("  ");
+        write!(handle, " ").unwrap();
+        let bold = Style::new().bold();
         for c in line {
             // replace all control chars with dots
             match (*c as char).is_control() {
-                true => print!("."),
-                false => print!("{}", (*c as char)),
+                true => write!(handle, ".").unwrap(),
+                false => {
+                    if no_color {
+                        write!(handle, "{}", (*c as char)).unwrap();
+                    } else {
+                        write!(handle, "{}", bold.paint((*c as char).to_string())).unwrap();
+                    }
+                }
             }
         }
     }
