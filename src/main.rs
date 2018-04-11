@@ -23,15 +23,15 @@ struct Opt {
 
     #[structopt(short = "b", long = "one-byte-octal", help = "One-byte octal display")]
     one_byte_octal: bool,
-    #[structopt(short = "c", long = "one-byte-char")]
+    #[structopt(short = "c", long = "one-byte-char", help = "One-byte character display")]
     one_byte_char: bool,
-    #[structopt(short = "C", long = "canonical-hex")]
+    #[structopt(short = "C", long = "canonical-hex", help = "Canonical hexadecimal display")]
     canonical_hex: bool,
-    #[structopt(short = "x", long = "two-byte-hex")]
+    #[structopt(short = "x", long = "two-byte-hex", help = "Two-byte hexadecimal display (default)")]
     two_byte_hex: bool,
-    #[structopt(short = "d", long = "two-byte-dec")]
+    #[structopt(short = "d", long = "two-byte-dec", help = "Two-byte decimal display")]
     two_byte_dec: bool,
-    #[structopt(short = "o", long = "two-byte-octal")]
+    #[structopt(short = "o", long = "two-byte-octal", help = "Two-byte octal display")]
     two_byte_octal: bool,
     #[structopt(long = "no-color", help = "Disable colored ANSI output")]
     no_color: bool,
@@ -151,7 +151,7 @@ fn print_line(
     if no_color {
         write!(handle, "\n{:08x}:", address).unwrap();
     } else {
-        write!(handle, "\n{}:", Blue.paint(format!("{:08x}", address))).unwrap();
+        write!(handle, "\n{} ", Blue.paint(format!("{:08x}", address))).unwrap();
     }
 
     let words = match (line.len() % bytes) == 0 {
@@ -199,7 +199,7 @@ fn print_line(
             }
         }
 
-        write!(handle, " ").unwrap();
+        write!(handle, "  ").unwrap();
         for c in line {
             // replace all control chars with dots
             match (*c as char).is_control() {
