@@ -2,8 +2,7 @@
 extern crate structopt;
 extern crate ansi_term;
 
-use ansi_term::Color::Blue;
-use ansi_term::Style;
+use ansi_term::Color::{Fixed, Green};
 use std::cmp;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
@@ -139,7 +138,7 @@ fn print_line(
     if no_color {
         write!(handle, "\n{:08x}:", address).unwrap();
     } else {
-        write!(handle, "\n{}:", Blue.paint(format!("{:08x}", address))).unwrap();
+        write!(handle, "\n{}:", Green.paint(format!("{:08x}", address))).unwrap();
     }
 
     let words = match (line.len() % bytes) == 0 {
@@ -190,7 +189,6 @@ fn print_line(
         }
 
         write!(handle, " ").unwrap();
-        let bold = Style::new().bold();
         for c in line {
             // replace all control chars with dots
             match (*c as char).is_control() {
@@ -199,7 +197,7 @@ fn print_line(
                     if no_color {
                         write!(handle, "{}", (*c as char)).unwrap();
                     } else {
-                        write!(handle, "{}", bold.paint((*c as char).to_string())).unwrap();
+                        write!(handle, "{}", Fixed(198).paint((*c as char).to_string())).unwrap(); // 202
                     }
                 }
             }
