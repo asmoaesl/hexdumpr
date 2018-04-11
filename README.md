@@ -1,23 +1,25 @@
 # hexdumpr
-hexdump in Rust
+Hexdump in Rust.
 
-Usage
----
+# What Changed Since Forking
+* Replaced `getopts` with `structopt` (clap) argument parsing.
+* Added ANSI color support and printing (can be disabled.)
+* Performance improvements
 
-Options:
+# Usage
+## Options
+| Flag (short, long) | Input | Description |
+| ------------------ | ----- | ----------- |
+| `-n`, `--length` | length: `usize` | Interpret only length bytes of input. |
+| `-s`, `--offset` | offset: `usize` | Skip offset bytes from the beginning of the input. |
+| `-b`, `--one-byte-octal` | N/A | One-byte octal display. |
+| `-c`, `--one-byte-char` | N/A | One-byte character display. |
+| `-C`, `--canonical` | N/A | Canonical hex display. |
+| `-d`, `--two-byte-dec` | N/A | Two-byte decimal display. |
+| `-o`, `--two-byte-octal` | N/A | Two-byte octal display. |
+| `-x`, `--two-byte-hex` | N/A | Two-byte hexadecimal display. |
 
-```
--n length Interpret only length bytes of input.
--s offset Skip offset bytes from the beginning of the input.
-
--b        One-byte octal display.
--c        One-byte character display.
--C        Canonical hex display.
--d        Two-byte decimal display.
--o        Two-byte octal display.
--x        Two-byte hexadecimal display.
-```
-
+## Example
 ```
 > hexdumpr
 Usage: hexdumpr [-bcCdox][-s offset][-n length] file ...
