@@ -2,14 +2,14 @@
 extern crate structopt;
 extern crate ansi_term;
 
-use ansi_term::Color::{Fixed, Green};
+use ansi_term::Color::{Fixed, Blue};
 use std::cmp;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt)]
 #[structopt()]
 struct Opt {
     #[structopt(name = "FILE", parse(from_os_str))]
@@ -69,47 +69,58 @@ fn main() {
     }
 
     // display mode
-    let bytes;
-    let display;
-    match () {
-        _ if opt.one_byte_octal => {
-            display = 'b';
-            bytes = 1;
-        }
-        _ if opt.one_byte_char => {
-            display = 'c';
-            bytes = 1;
-        }
-        _ if opt.canonical_hex => {
-            display = 'C';
-            bytes = 1;
-        }
-        _ if opt.two_byte_dec => {
-            display = 'd';
-            bytes = 2;
-        }
-        _ if opt.two_byte_octal => {
-            display = 'o';
-            bytes = 2;
-        }
-        _ => {
-            display = 'x';
-            bytes = 2;
-        }
+    let display = if opt.one_byte_octal {
+        Display::OneByteOctal
     }
+    else if opt.one_byte_char {
+        Display::OneByteChar
+    }
+    else if opt.canonical_hex {
+        Display::CanonicalHex
+    }
+    else if opt.two_byte_dec {
+        Display::TwoByteDecimal
+    }
+    else if opt.two_byte_octal {
+        Display::TwoByteOctal
+    }
+    else if opt.two_byte_hex {
+        Display::TwoByteHex
+    }
+    else {
+        Display::TwoByteHex
+    };
 
     if !opt.no_color && cfg!(windows) {
         ansi_term::enable_ansi_support().unwrap();
     }
 
-    print_hexdump(&data[offset..end], offset, display, bytes, &opt);
+    print_hexdump(&data[offset..end], offset, display, &opt);
 }
 
-fn print_hexdump(data: &[u8], offset: usize, display: char, bytes: usize, opt: &Opt) {
-    // TODO: use StdoutLock
+#[derive(Clone, Copy, PartialEq)]
+enum Display {
+    OneByteOctal,   // -b
+    OneByteChar,    // -c
+    CanonicalHex,   // -C
+    TwoByteDecimal, // -d
+    TwoByteOctal,   // -o
+    TwoByteHex,     // -x, default
+}
+
+fn print_hexdump(data: &[u8], offset: usize, display: Display, opt: &Opt) {
     let no_color = opt.no_color;
     let stdout = stdout();
     let mut handle = stdout.lock();
+
+    let bytes = match display {
+        Display::OneByteOctal => 1,
+        Display::OneByteChar => 1,
+        Display::CanonicalHex => 1,
+        Display::TwoByteDecimal => 2,
+        Display::TwoByteOctal => 2,
+        Display::TwoByteHex => 2,
+    };
 
     let mut address = 0;
     while address <= data.len() {
@@ -129,16 +140,18 @@ fn print_hexdump(data: &[u8], offset: usize, display: char, bytes: usize, opt: &
 fn print_line(
     line: &[u8],
     address: usize,
-    display: char,
+    display: Display,
     bytes: usize,
     no_color: bool,
     handle: &mut ::std::io::StdoutLock,
 ) {
+    use Display::*;
+
     // print address
     if no_color {
         write!(handle, "\n{:08x}:", address).unwrap();
     } else {
-        write!(handle, "\n{}:", Green.paint(format!("{:08x}", address))).unwrap();
+        write!(handle, "\n{}:", Blue.paint(format!("{:08x}", address))).unwrap();
     }
 
     let words = match (line.len() % bytes) == 0 {
@@ -157,31 +170,29 @@ fn print_line(
             },
         };
         match display {
-            'b' => write!(handle, " {:03o}", word).unwrap(),
-            'c' => match ((word as u8) as char).is_control() {
+            OneByteOctal => write!(handle, " {:03o}", word).unwrap(),
+            OneByteChar => match ((word as u8) as char).is_control() {
                 true => write!(handle, " ").unwrap(),
                 false => write!(handle, " {:03}", (word as u8) as char).unwrap(),
             },
-            'C' => write!(handle, " {:02x}", word).unwrap(),
-            'x' => write!(handle, " {:04x}", word).unwrap(),
-            'o' => write!(handle, " {:06o} ", word).unwrap(),
-            'd' => write!(handle, "  {:05} ", word).unwrap(),
-            _ => write!(handle, " {:04x}", word).unwrap(),
+            CanonicalHex => write!(handle, " {:02x}", word).unwrap(),
+            TwoByteDecimal => write!(handle, "  {:05} ", word).unwrap(),
+            TwoByteOctal => write!(handle, " {:06o} ", word).unwrap(),
+            TwoByteHex => write!(handle, " {:04x}", word).unwrap(),
         }
     }
 
-    if display != 'c' {
+    if display != Display::OneByteChar {
         if (line.len() % 16) > 0 {
             // align
             let words_left = (16 - line.len()) / bytes;
             let word_size = match display {
-                'b' => 4,
-                'c' => 4,
-                'C' => 3,
-                'x' => 5,
-                'o' => 8,
-                'd' => 8,
-                _ => 5,
+                OneByteOctal => 4,
+                OneByteChar => 4,
+                CanonicalHex => 3,
+                TwoByteDecimal => 8,
+                TwoByteOctal => 8,
+                TwoByteHex => 5
             };
             for _ in 0..word_size * words_left {
                 write!(handle, " ").unwrap();
