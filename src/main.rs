@@ -197,7 +197,7 @@ fn print_line(
                     if no_color {
                         write!(handle, "{}", (*c as char)).unwrap();
                     } else {
-                        write!(handle, "{}", Fixed(198).paint((*c as char).to_string())).unwrap(); // 202
+                        write!(handle, "{}", Fixed(202).paint((*c as char).to_string())).unwrap();
                     }
                 }
             }
